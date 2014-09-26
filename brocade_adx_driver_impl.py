@@ -441,7 +441,7 @@ class BrocadeAdxDeviceDriverImpl():
             raise adx_exception.ConfigError(msg=e.message)
 
     @log.log
-    def update_vip(self, new_vip, old_vip):
+    def update_vip(self, old_vip, new_vip):
         # As per the API specification,
         # following properties on VIP can be updated.
         # name - Not Supported in ADX
@@ -450,6 +450,8 @@ class BrocadeAdxDeviceDriverImpl():
         # session_persistence
         # connection_limit - Not Applicable in ADX
         # admin_state_up - Supported in ADX
+
+        # TODO: implement change name
 
         vsIpAddress = new_vip['address']
         vsPort = new_vip['protocol_port']
