@@ -205,7 +205,6 @@ class BrocadeAdxDeviceDriverImpl():
             return reply.genericInfo.totalEntriesAvailable
         except WebFault:
             return 0
-    @log.log
     def _bind_member_to_vip(self, member, vip):
         rsIpAddress = member['address']
         rsName = rsIpAddress
@@ -312,7 +311,6 @@ class BrocadeAdxDeviceDriverImpl():
         except WebFault as e:
             raise adx_exception.ConfigError(msg=e.message)
 
-    @log.log
     def _set_predictor_on_virtual_server(self, vip, lb_method):
         # TODO: Source_IP not supported, not implemented
         try:
@@ -335,7 +333,6 @@ class BrocadeAdxDeviceDriverImpl():
         except WebFault as e:
             raise adx_exception.ConfigError(msg=e.message)
 
-    @log.log
     def _create_virtual_server(self, vip):
         vsName = vip['name']
         vsIpAddress = vip['address']
@@ -367,7 +364,6 @@ class BrocadeAdxDeviceDriverImpl():
             LOG.error(_("Exception in _create_virtual_server in device driver : %s"), e.message)
             raise adx_exception.ConfigError(msg=e.message)
 
-    @log.log
     def _create_virtual_server_port(self, vip):
         vsName = vip['name']
         vsIpAddress = vip['address']
@@ -522,7 +518,6 @@ class BrocadeAdxDeviceDriverImpl():
             for member in members:
                 self._bind_member_to_vip(member, new_vip)
 
-    @log.log
     def _is_port_policy_in_use(self, health_monitor_name):
         startIndex = 1
         numRetrieved = 15
@@ -551,7 +546,6 @@ class BrocadeAdxDeviceDriverImpl():
         except WebFault:
             return False
 
-    @log.log
     def _does_port_policy_exist(self, health_monitor):
         name = health_monitor['id']
         ''' Not needed in IceHouse
@@ -566,7 +560,6 @@ class BrocadeAdxDeviceDriverImpl():
             return False
         return False
 
-    @log.log
     def _validate_delay(self, monitor_type, delay):
         if monitor_type == constants.HEALTH_MONITOR_HTTP:
             if delay < 1 or delay > 120:
@@ -575,12 +568,10 @@ class BrocadeAdxDeviceDriverImpl():
             if delay < 5 or delay > 120:
                 raise adx_exception.UnsupportedOption(value=delay, name="delay")
 
-    @log.log
     def _validate_max_retries(self, max_retries):
         if max_retries < 1 or max_retries > 5:
             raise adx_exception.UnsupportedOption(value=max_retries, name="max_retries")
 
-    @log.log
     def _create_update_port_policy(self, health_monitor, is_create=True):
         # TODO: State (Enable/Disable) does not work
 
@@ -1076,7 +1067,6 @@ class BrocadeAdxDeviceDriverImpl():
                 constants.STATS_ACTIVE_CONNECTIONS: activeConnections,
                 constants.STATS_TOTAL_CONNECTIONS: totalConnections}
 
-    @log.log
     def _create_port_profile(self, port_profile):
         protocol_port = port_profile['protocol_port']
         try:
@@ -1094,7 +1084,6 @@ class BrocadeAdxDeviceDriverImpl():
             # May be port profile already exists for the given port
             LOG.debug(_('Exception in create port profile %s'), e)
 
-    @log.log
     def _delete_port_profile(self, port_profile):
         protocol_port = port_profile['protocol_port']
         try:
