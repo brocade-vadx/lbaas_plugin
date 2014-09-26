@@ -312,9 +312,11 @@ class BrocadeAdxDeviceDriverImpl():
         except WebFault as e:
             raise adx_exception.ConfigError(msg=e.message)
 
+    @log.log
     def _set_predictor_on_virtual_server(self, vip, lb_method):
+        # TODO: Source_IP not supported, not implemented
         try:
-            server = self._adx_server(vip['address'], vip['name'])
+            server = self._adx_server(self._get_vip_address(vip['port_id']), vip['name'])
 
             predictorMethodConfiguration = (self.slb_factory.create
                                             ('PredictorMethodConfiguration'))
@@ -333,6 +335,7 @@ class BrocadeAdxDeviceDriverImpl():
         except WebFault as e:
             raise adx_exception.ConfigError(msg=e.message)
 
+    @log.log
     def _create_virtual_server(self, vip):
         vsName = vip['name']
         vsIpAddress = vip['address']
@@ -579,12 +582,9 @@ class BrocadeAdxDeviceDriverImpl():
 
     @log.log
     def _create_update_port_policy(self, health_monitor, is_create=True):
+        # TODO: State (Enable/Disable) does not work
 
         name = health_monitor['id']
-        ''' Not needed in Icehouse
-        if health_monitor.get('name'):
-            name = health_monitor['name']
-        '''
         monitor_type = health_monitor['type']
         delay = health_monitor['delay']
         self._validate_delay(monitor_type, delay)
@@ -1003,7 +1003,7 @@ class BrocadeAdxDeviceDriverImpl():
             pass
 
     @log.log
-    def update_pool(self, new_pool, old_pool):
+    def update_pool(self, old_pool, new_pool):
         new_lb_method = new_pool.get('lb_method')
         old_lb_method = old_pool.get('lb_method')
         vip_id = new_pool.get('vip_id')
