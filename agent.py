@@ -23,6 +23,7 @@ from oslo.config import cfg
 from eventlet import greenthread
 from neutron.db import api as db
 from neutron.db import models_v2
+from neutron.db.loadbalancer import loadbalancer_db as lb_models
 from neutron.agent.common import config
 from neutron.agent.linux import ip_lib
 from neutron.agent.linux import utils
@@ -263,7 +264,7 @@ class AgentDeviceDriver(agent_device_driver.AgentDeviceDriver):
                 except UnsupportedFeature as e:
                     raise e
                 except Exception as e:
-                    LOG.debug('vLB Driver::create_member trying to connect to'
+                    LOG.debug('vLB Driver::update_pool trying to connect to'
                             'vLB - %s' % e)
                     yield self.conf.brocade_vlb.vlb_poll_interval
                     continue
@@ -283,6 +284,8 @@ class AgentDeviceDriver(agent_device_driver.AgentDeviceDriver):
         LOG.info('vLB Driver::create_member')
         vlb = vlb_db.get_vlb_from_pool_id(member['pool_id'])
         mgmt_ip = vlb['mgmt_ip']
+        vip = self._get_vip(member['pool_id'])
+        member['vip_id'] = vip['id']
         def _vLb_soap():
             while True:
                 try:
@@ -470,6 +473,13 @@ class AgentDeviceDriver(agent_device_driver.AgentDeviceDriver):
 
         address = address_map[0]["addr"]
         return address
+
+    def _get_vip(self, pool_id):
+        session = db.get_session()
+        query = session.query(lb_models.Vip)
+        vip = query.filter(lb_models.Vip.pool_id == pool_id).one()
+
+        return vip
 
 class Wrap(object):
     """A light attribute wrapper for compatibility with the interface lib."""

@@ -24,6 +24,7 @@ from neutron.context import get_admin_context
 from neutron.openstack.common import log as logging
 from neutron.services.loadbalancer import constants
 from neutron.db import api as db
+from neutron.db import models_v2
 from neutron.db.loadbalancer import loadbalancer_db as lb_db
 from neutron.services.loadbalancer.drivers.brocade.device_driver import (
     brocade_adx_exceptions as adx_exception
@@ -98,6 +99,12 @@ class BrocadeAdxDeviceDriverImpl():
             raise adx_exception.UnknownError(msg=m)
         query = session.query(lb_db.HealthMonitor)
         return query.filter(lb_db.HealthMonitor.id == hma[0]['monitor_id']).first()
+
+    def _get_vip_address(self, port_id):
+        session = db.get_session()
+        query = session.query(models_v2.IPAllocation)
+        ipaddress = query.filter(models_v2.IPAllocation.port_id == port_id).one()
+        return ipaddress['ip_address']
 
     def _adx_server(self, address, name=None):
         server = self.slb_factory.create("Server")
@@ -198,15 +205,17 @@ class BrocadeAdxDeviceDriverImpl():
             return reply.genericInfo.totalEntriesAvailable
         except WebFault:
             return 0
-
+    @log.log
     def _bind_member_to_vip(self, member, vip):
         rsIpAddress = member['address']
         rsName = rsIpAddress
         if member.get('name'):
             rsName = member['name']
         rsPort = member['protocol_port']
-
-        vsIpAddress = vip['address']
+        # IceHouse: vip address is no longer in the vip datastructure, we need
+        # to fetch the address from the ipallocations table from neutron
+        #vsIpAddress = vip['address']
+        vsIpAddress = self._get_vip_address(vip['port_id'])
         vsPort = vip['protocol_port']
         vsName = vip['name']
 
@@ -867,16 +876,13 @@ class BrocadeAdxDeviceDriverImpl():
             (rsPortSeq.RealServerPortConfigurationSequence
              .append(rsPortConfig))
 
-            LOG.debug(_('Real Server Port Config Sequence %s'),
-                      rsPortSeq)
             self.slb_service.createRealServerPortWithConfiguration(rsPortSeq)
         except WebFault as e:
             raise adx_exception.ConfigError(msg=e.message)
 
     @log.log
     def create_member(self, member):
-        LOG.debug('************** %s *****************' % dir(member))
-        LOG.debug('************** %s *****************' % member)
+
         # Create Real Server
         self._create_real_server(member)
 
@@ -888,9 +894,11 @@ class BrocadeAdxDeviceDriverImpl():
         # If pool is already associated to a vip,
         # bind the member to the vip
         pool = self._get_pool(pool_id)
-        vip_id = pool['vip_id']
-        if vip_id:
-            vip = self._get_vip(vip_id)
+        # IceHouse vip object does not longer contain the address, we need to
+        # fetch the address from the neutron ipallocations tables with the
+        # port_id, this is done in _get_vip
+        vip = self._get_vip(member['vip_id'])
+        if vip:
             self._bind_member_to_vip(member, vip)
 
         # Retrieve the monitors from the pool using pool_id
@@ -916,7 +924,7 @@ class BrocadeAdxDeviceDriverImpl():
             raise adx_exception.ConfigError(msg=e.message)
 
     @log.log
-    def update_member(self, new_member, old_member):
+    def update_member(self, old_member, new_member):
 
         # As per the API specification,
         # following properties can be updated
